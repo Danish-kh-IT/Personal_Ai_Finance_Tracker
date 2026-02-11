@@ -1,0 +1,11 @@
+.env
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.sqlite3
+.DS_Store
+static/
+media/
+.ipynb_checkpoints/
+*.log

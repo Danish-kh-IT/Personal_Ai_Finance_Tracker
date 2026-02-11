@@ -1,0 +1,148 @@
+{% extends 'tracker/base.html' %} {% block content %}
+<div class="max-w-3xl mx-auto py-12">
+  <!-- Back button -->
+  <div class="mb-6">
+    <a
+      href="{% url 'dashboard' %}"
+      class="inline-flex items-center text-sm text-gray-500 hover:text-primary transition-colors"
+    >
+      <i data-lucide="arrow-left" class="w-4 h-4 mr-1"></i> Back to Dashboard
+    </a>
+  </div>
+
+  <div
+    class="bg-white dark:bg-slate-900/70 dark:backdrop-blur-xl rounded-2xl shadow-xl overflow-hidden border border-gray-100 dark:border-slate-800"
+  >
+    <!-- Header -->
+    <div
+      class="bg-gradient-to-r from-primary to-indigo-600 px-8 py-10 text-center relative overflow-hidden"
+    >
+      <div
+        class="absolute inset-0 bg-white/10 opacity-30 pattern-grid-lg"
+      ></div>
+      <div class="relative z-10">
+        <div
+          class="bg-white/20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm"
+        >
+          <i data-lucide="mic" class="w-8 h-8 text-white"></i>
+        </div>
+        <h2 class="text-3xl font-bold text-white tracking-tight">
+          Add New Expense
+        </h2>
+        <p class="text-indigo-100 mt-2 max-w-lg mx-auto">
+          Just describe what you spent naturally. AI will handle the details.
+        </p>
+      </div>
+    </div>
+
+    <!-- Form Body -->
+    <div class="px-8 py-10">
+      {% if error %}
+      <div
+        class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-r-lg animate-shake"
+      >
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <i data-lucide="alert-circle" class="h-5 w-5 text-red-500"></i>
+          </div>
+          <div class="ml-3">
+            <p class="text-sm text-red-700">{{ error }}</p>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <form method="POST" id="expenseForm">
+        {% csrf_token %}
+        <div class="mb-8">
+          <label
+            for="raw_text"
+            class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2"
+          >
+            What did you spend on?
+          </label>
+          <div class="relative">
+            <textarea
+              name="raw_text"
+              id="raw_text"
+              rows="4"
+              class="block w-full rounded-xl border-gray-300 dark:border-slate-700 shadow-sm focus:border-primary focus:ring-primary text-lg p-4 resize-none transition-shadow bg-white dark:bg-slate-800/50 dark:text-white dark:placeholder-slate-500"
+              placeholder="e.g. Paid 1500 for Pizza at Domino's"
+              required
+              autofocus
+            ></textarea>
+            <div class="absolute bottom-3 right-3 text-gray-400">
+              <i data-lucide="edit-3" class="w-4 h-4"></i>
+            </div>
+          </div>
+
+          <!-- Examples -->
+          <div class="mt-4 flex flex-wrap gap-2">
+            <span
+              class="text-xs text-gray-500 dark:text-slate-400 uppercase font-semibold tracking-wider"
+              >Try:</span
+            >
+            <button
+              type="button"
+              class="text-xs bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-600 dark:text-slate-300 px-2 py-1 rounded-md transition-colors"
+              onclick="setText('Spent 2500 on Fuel for Car')"
+            >
+              "Spent 2500 on Fuel"
+            </button>
+            <button
+              type="button"
+              class="text-xs bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-600 dark:text-slate-300 px-2 py-1 rounded-md transition-colors"
+              onclick="setText('Bought groceries worth 5000')"
+            >
+              "Groceries 5000"
+            </button>
+            <button
+              type="button"
+              class="text-xs bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-600 dark:text-slate-300 px-2 py-1 rounded-md transition-colors"
+              onclick="setText('Netflix subscription 1100')"
+            >
+              "Netflix 1100"
+            </button>
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          id="submitBtn"
+          class="w-full flex justify-center items-center py-4 px-4 border border-transparent rounded-xl shadow-lg text-lg font-bold text-white bg-primary hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-200 transition-all transform hover:-translate-y-0.5"
+        >
+          <span id="btnText">Process with AI</span>
+          <i data-lucide="sparkles" class="ml-2 w-5 h-5"></i>
+        </button>
+      </form>
+    </div>
+
+    <!-- Footer -->
+    <div class="bg-gray-50 px-8 py-4 border-t border-gray-100 text-center">
+      <p class="text-xs text-gray-400">Powered by Llama 3 • Secure & Private</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  function setText(text) {
+    document.getElementById("raw_text").value = text;
+    document.getElementById("raw_text").focus();
+  }
+
+  document
+    .getElementById("expenseForm")
+    .addEventListener("submit", function () {
+      const btn = document.getElementById("submitBtn");
+      const btnText = document.getElementById("btnText");
+      const icon = btn.querySelector("svg");
+
+      btn.disabled = true;
+      btn.classList.add("opacity-75", "cursor-wait");
+      btnText.innerText = "Analyzing...";
+
+      // Simple spin animation for icon
+      if (icon) icon.classList.add("animate-spin");
+    });
+</script>
+{% endblock %}

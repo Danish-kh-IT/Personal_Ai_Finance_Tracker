@@ -1,0 +1,45 @@
+{% extends 'tracker/base.html' %} {% block content %}
+<div
+  class="min-h-[60vh] flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-gray-50/50"
+>
+  <div class="sm:mx-auto sm:w-full sm:max-w-md">
+    <div
+      class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 p-8 text-center"
+    >
+      <div
+        class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-6"
+      >
+        <i data-lucide="alert-triangle" class="h-8 w-8 text-red-600"></i>
+      </div>
+
+      <h3 class="text-xl font-bold text-gray-900 mb-2">Delete Budget?</h3>
+      <p class="text-sm text-gray-500 mb-8">
+        Are you sure you want to delete the budget for
+        <span class="font-semibold text-gray-800"
+          >{{ budget.category.name|default:"Overall" }} ({{ budget.period
+          }})</span
+        >? This action cannot be undone.
+      </p>
+
+      <form
+        method="POST"
+        class="flex flex-col sm:flex-row gap-3 justify-center"
+      >
+        {% csrf_token %}
+        <a
+          href="{% url 'budget_list' %}"
+          class="w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:w-auto sm:text-sm transition-colors"
+        >
+          Cancel
+        </a>
+        <button
+          type="submit"
+          class="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 sm:w-auto sm:text-sm transition-colors"
+        >
+          Yes, Delete
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

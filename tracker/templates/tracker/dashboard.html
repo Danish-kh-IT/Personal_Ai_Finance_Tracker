@@ -1,0 +1,650 @@
+{% extends 'tracker/base.html' %} {% block content %}
+<div class="py-6">
+  <!-- Header with Date -->
+  <div
+    class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between animate-fade-in-up"
+  >
+    <div>
+      <h1
+        class="text-3xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-600"
+      >
+        Dashboard
+      </h1>
+      <p class="mt-1 text-sm text-gray-500 dark:text-slate-400">
+        Overview of your financial health
+      </p>
+    </div>
+    <div class="mt-4 sm:mt-0 flex gap-3">
+      <a
+        href="{% url 'add_expense' %}"
+        class="inline-flex items-center px-4 py-2 border border-transparent rounded-xl shadow-lg shadow-primary/30 text-sm font-medium text-white bg-gradient-to-r from-primary to-primaryDark hover:from-primaryDark hover:to-primary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all hover:scale-105"
+      >
+        <i data-lucide="plus" class="w-4 h-4 mr-2"></i> Add Expense
+      </a>
+    </div>
+  </div>
+
+  <!-- Budget Alerts -->
+  {% if budget_alerts %}
+  <div
+    class="mb-8 glass-card border-l-4 border-red-500 rounded-xl p-4 animate-fade-in-up shadow-sm bg-red-50/50 dark:bg-red-900/10"
+  >
+    <div class="flex items-start">
+      <div class="flex-shrink-0">
+        <i
+          data-lucide="alert-triangle"
+          class="h-6 w-6 text-red-500 animate-pulse-slow"
+        ></i>
+      </div>
+      <div class="ml-3 w-full">
+        <h3 class="text-lg font-medium text-red-800 dark:text-red-400">
+          Budget Alerts
+        </h3>
+        <div class="mt-2 text-sm text-red-700 dark:text-red-300 grid gap-2">
+          {% for alert in budget_alerts %}
+          <div
+            class="flex justify-between items-center bg-white/60 dark:bg-slate-800/60 p-2 rounded-lg"
+          >
+            <span>
+              <strong
+                >{{ alert.budget.category.name|default:"Overall" }}</strong
+              >
+              ({{ alert.budget.period|title }})
+            </span>
+            {% if alert.exceeded %}
+            <span
+              class="font-bold text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 px-2 py-0.5 rounded text-xs"
+              >Exceeded by Rs. {{ alert.remaining|floatformat:2|slice:"1:"
+              }}</span
+            >
+            {% else %}
+            <span
+              class="font-bold text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/30 px-2 py-0.5 rounded text-xs"
+              >{{ alert.percentage|floatformat:1 }}% used</span
+            >
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- AI Savings Tip Section -->
+  <div class="mb-8 animate-fade-in-up" style="animation-delay: 0.05s">
+    <div
+      class="glass-card rounded-2xl p-6 bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10 border border-violet-100/50"
+    >
+      <div
+        class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
+      >
+        <div class="flex-1">
+          <div class="flex items-center gap-2 mb-2">
+            <div class="p-2 bg-violet-100 rounded-lg">
+              <i data-lucide="sparkles" class="w-5 h-5 text-violet-600"></i>
+            </div>
+            <h3 class="font-bold text-gray-900 dark:text-white text-lg">
+              AI Financial Insight
+            </h3>
+          </div>
+          <div
+            id="ai-tip-content"
+            class="text-gray-600 dark:text-slate-300 leading-relaxed pl-1"
+          >
+            Get personalized savings advice based on your spending patterns this
+            month.
+          </div>
+        </div>
+        <button
+          onclick="fetchSavingsTip()"
+          id="get-tip-btn"
+          class="flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl transition-all shadow-lg hover:shadow-violet-500/30 font-medium whitespace-nowrap group"
+        >
+          <i
+            data-lucide="zap"
+            class="w-4 h-4 group-hover:scale-110 transition-transform"
+          ></i>
+          <span id="btn-text">Get Advice</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats Grid -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <!-- Total Spending -->
+    <div
+      class="glass-card rounded-2xl p-6 relative overflow-hidden group hover-card-anim animate-fade-in-up cursor-pointer"
+      style="animation-delay: 0.1s"
+    >
+      <div
+        class="absolute -right-6 -top-6 bg-gradient-to-br from-primary/20 to-purple-500/20 w-32 h-32 rounded-full group-hover:scale-110 transition-transform duration-500"
+      ></div>
+      <div class="relative">
+        <div class="flex items-center justify-between mb-4">
+          <h3
+            class="text-sm font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider"
+          >
+            Total Spending
+          </h3>
+          <div class="p-2 bg-primary/10 rounded-xl">
+            <i data-lucide="dollar-sign" class="w-6 h-6 text-primary"></i>
+          </div>
+        </div>
+        <div class="flex items-baseline gap-2">
+          <p
+            class="text-4xl font-bold text-gray-900 dark:text-white tracking-tight"
+          >
+            Rs. {{ total_spent|floatformat:0 }}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transactions -->
+    <div
+      class="glass-card rounded-2xl p-6 relative overflow-hidden group hover-card-anim animate-fade-in-up cursor-pointer"
+      style="animation-delay: 0.2s"
+    >
+      <div
+        class="absolute -right-6 -top-6 bg-gradient-to-br from-emerald-400/20 to-teal-500/20 w-32 h-32 rounded-full group-hover:scale-110 transition-transform duration-500"
+      ></div>
+      <div class="relative">
+        <div class="flex items-center justify-between mb-4">
+          <h3
+            class="text-sm font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider"
+          >
+            Transactions
+          </h3>
+          <div class="p-2 bg-emerald-100 rounded-xl">
+            <i data-lucide="receipt" class="w-6 h-6 text-emerald-600"></i>
+          </div>
+        </div>
+        <div class="flex items-baseline gap-2">
+          <p
+            class="text-4xl font-bold text-gray-900 dark:text-white tracking-tight"
+          >
+            {{ total_expenses }}
+          </p>
+          <span class="text-sm text-gray-400 font-medium">Total</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Average -->
+    <div
+      class="glass-card rounded-2xl p-6 relative overflow-hidden group hover-card-anim animate-fade-in-up cursor-pointer"
+      style="animation-delay: 0.3s"
+    >
+      <div
+        class="absolute -right-6 -top-6 bg-gradient-to-br from-blue-400/20 to-cyan-500/20 w-32 h-32 rounded-full group-hover:scale-110 transition-transform duration-500"
+      ></div>
+      <div class="relative">
+        <div class="flex items-center justify-between mb-4">
+          <h3
+            class="text-sm font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider"
+          >
+            Avg. Expense
+          </h3>
+          <div class="p-2 bg-blue-100 rounded-xl">
+            <i data-lucide="bar-chart-3" class="w-6 h-6 text-blue-600"></i>
+          </div>
+        </div>
+        <div class="flex items-baseline gap-2">
+          <p
+            class="text-4xl font-bold text-gray-900 dark:text-white tracking-tight"
+          >
+            Rs. {{ avg_expense|floatformat:0 }}
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Section -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+    <!-- Monthly Trend -->
+    <div
+      class="glass-card rounded-2xl p-6 animate-fade-in-up"
+      style="animation-delay: 0.4s"
+    >
+      <h3
+        class="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2"
+      >
+        <div class="p-1.5 rounded-lg bg-indigo-100 dark:bg-indigo-900/30">
+          <i
+            data-lucide="trending-up"
+            class="w-5 h-5 text-indigo-600 dark:text-indigo-400"
+          ></i>
+        </div>
+        Monthly Spending Trend
+      </h3>
+      <div class="h-64 relative">
+        {% if monthly_values %}
+        <canvas id="monthlyChart"></canvas>
+        {% else %}
+        <div
+          class="absolute inset-0 flex items-center justify-center text-gray-400 dark:text-slate-500 bg-gray-50/50 dark:bg-slate-800/20 rounded-lg"
+        >
+          No data available
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Category Breakdown -->
+    <div
+      class="glass-card rounded-2xl p-6 animate-fade-in-up"
+      style="animation-delay: 0.5s"
+    >
+      <h3
+        class="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2"
+      >
+        <div class="p-1.5 rounded-lg bg-emerald-100">
+          <i data-lucide="pie-chart" class="w-5 h-5 text-emerald-600"></i>
+        </div>
+        Category Breakdown
+      </h3>
+      <div class="h-64 relative flex items-center justify-center">
+        {% if values %}
+        <canvas id="categoryChart"></canvas>
+        {% else %}
+        <div
+          class="h-full w-full flex items-center justify-center text-gray-400 dark:text-slate-500 bg-gray-50/50 dark:bg-slate-800/20 rounded-lg"
+        >
+          Add expenses to see breakdown
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Daily Trend -->
+  <div
+    class="glass-card rounded-2xl p-6 mb-8 animate-fade-in-up"
+    style="animation-delay: 0.6s"
+  >
+    <h3 class="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+      <div class="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+        <i
+          data-lucide="activity"
+          class="w-5 h-5 text-blue-600 dark:text-blue-400"
+        ></i>
+      </div>
+      Daily Spending (Last 30 Days)
+    </h3>
+    <div class="h-64 relative">
+      {% if trend_amounts %}
+      <canvas id="dailyChart"></canvas>
+      {% else %}
+      <div
+        class="absolute inset-0 flex items-center justify-center text-gray-400 bg-gray-50/50 rounded-lg"
+      >
+        No recent activity
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Recent Expenses -->
+  <div
+    class="glass-card rounded-2xl overflow-hidden animate-fade-in-up"
+    style="animation-delay: 0.7s"
+  >
+    <div
+      class="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/30"
+    >
+      <h3 class="text-lg font-bold text-gray-900 dark:text-white">
+        Recent Transactions
+      </h3>
+      <a
+        href="{% url 'expense_list' %}"
+        class="text-sm font-medium text-primary hover:text-indigo-700 flex items-center gap-1 transition-colors hover:translate-x-1"
+      >
+        View All <i data-lucide="chevron-right" class="w-4 h-4"></i>
+      </a>
+    </div>
+    <div class="overflow-x-auto">
+      {% if recent_expenses %}
+      <!-- Mobile View (Stacked) -->
+      <div class="md:hidden">
+        {% for expense in recent_expenses %}
+        <div
+          class="p-4 border-b border-gray-100 flex justify-between items-start bg-white/40 hover:bg-white/60 transition-colors"
+        >
+          <div class="flex flex-col gap-1">
+            <span class="font-bold text-gray-900 dark:text-white"
+              >{{ expense.item }}</span
+            >
+            <span class="text-xs text-gray-400"
+              >{{ expense.created_at|date:"d M Y" }}</span
+            >
+            <span class="text-xs text-gray-500 truncate max-w-[200px]"
+              >{{ expense.raw_text }}</span
+            >
+          </div>
+          <div class="flex flex-col items-end gap-2">
+            <span class="font-bold text-gray-900 dark:text-white"
+              >Rs. {{ expense.amount|floatformat:0 }}</span
+            >
+            <span
+              class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border-indigo-100 dark:border-indigo-800/50"
+            >
+              {{ expense.category.name|default:"Uncategorized" }}
+            </span>
+            <form
+              action="{% url 'delete_expense' expense.id %}"
+              method="POST"
+              onsubmit="
+                event.preventDefault();
+                openDeleteModal(this);
+              "
+            >
+              {% csrf_token %}
+              <button
+                type="submit"
+                class="text-gray-400 hover:text-red-500 p-1"
+              >
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Desktop View (Table) -->
+      <table class="min-w-full divide-y divide-gray-200 hidden md:table">
+        <thead class="bg-gray-50/50">
+          <tr>
+            <th
+              scope="col"
+              class="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider"
+            >
+              Date
+            </th>
+            <th
+              scope="col"
+              class="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider"
+            >
+              Item
+            </th>
+            <th
+              scope="col"
+              class="px-6 py-3 text-center text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider"
+            >
+              Category
+            </th>
+            <th
+              scope="col"
+              class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider"
+            >
+              Amount
+            </th>
+            <th scope="col" class="relative px-6 py-3">
+              <span class="sr-only">Delete</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody class="bg-white/40 divide-y divide-gray-100">
+          {% for expense in recent_expenses %}
+          <tr
+            class="hover:bg-white/60 dark:hover:bg-slate-800/50 transition-colors"
+          >
+            <td
+              class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-slate-400"
+            >
+              {{ expense.created_at|date:"d M Y" }}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <div class="text-sm font-medium text-gray-900 dark:text-white">
+                {{ expense.item }}
+              </div>
+              <div
+                class="text-xs text-gray-400 dark:text-slate-500 truncate w-48"
+              >
+                {{ expense.raw_text }}
+              </div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-center">
+              <span
+                class="px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-400"
+              >
+                {{ expense.category.name|default:"Uncategorized" }}
+              </span>
+            </td>
+            <td
+              class="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-gray-900 dark:text-white"
+            >
+              Rs. {{ expense.amount }}
+            </td>
+            <td
+              class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"
+            >
+              <form
+                action="{% url 'delete_expense' expense.id %}"
+                method="POST"
+                onsubmit="
+                  event.preventDefault();
+                  openDeleteModal(this);
+                "
+              >
+                {% csrf_token %}
+                <button
+                  type="submit"
+                  class="text-gray-400 hover:text-red-600 transition-colors p-1 transform hover:scale-110"
+                >
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="text-center py-12">
+        <div
+          class="bg-gray-50/50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4"
+        >
+          <i data-lucide="receipt" class="w-8 h-8 text-gray-300"></i>
+        </div>
+        <h3 class="text-sm font-medium text-gray-900 dark:text-white">
+          No transactions yet
+        </h3>
+        <p class="mt-1 text-sm text-gray-500 dark:text-slate-400">
+          Get started by adding your first expense.
+        </p>
+        <div class="mt-6">
+          <a
+            href="{% url 'add_expense' %}"
+            class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary hover:bg-indigo-700"
+          >
+            <i data-lucide="plus" class="w-4 h-4 mr-2"></i> Add Expense
+          </a>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  Chart.defaults.font.family = "'Outfit', sans-serif";
+
+  function getChartColor() {
+      return document.documentElement.classList.contains('dark') ? '#94a3b8' : '#6b7280';
+  }
+
+  function getGridColor() {
+      return document.documentElement.classList.contains('dark') ? 'rgba(255, 255, 255, 0.05)' : '#f1f5f9';
+  }
+
+  Chart.defaults.color = getChartColor();
+
+  // Category Pie Chart
+  {% if values %}
+  const categoryCtx = document.getElementById('categoryChart');
+  if (categoryCtx) {
+      new Chart(categoryCtx, {
+          type: 'doughnut',
+          data: {
+              labels: {{ labels|safe }},
+              datasets: [{
+                  data: {{ values|safe }},
+                  backgroundColor: ['#4F46E5', '#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#6366F1'],
+                  borderWidth: 0,
+                  hoverOffset: 10
+              }]
+          },
+          options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                  legend: {
+                      position: 'right',
+                      labels: {
+                          usePointStyle: true,
+                          padding: 20,
+                          color: getChartColor(),
+                          font: {family: "'Outfit', sans-serif"}
+                      }
+                  }
+              },
+              cutout: '75%',
+              animation: {
+                  animateScale: true,
+                  animateRotate: true
+              }
+          }
+      });
+  }
+  {% endif %}
+
+  // Monthly Trend Chart
+  {% if monthly_values %}
+  const monthlyCtx = document.getElementById('monthlyChart');
+  if (monthlyCtx) {
+      new Chart(monthlyCtx, {
+          type: 'bar',
+          data: {
+              labels: {{ monthly_labels|safe }},
+              datasets: [{
+                  label: 'Spending',
+                  data: {{ monthly_values|safe }},
+                  backgroundColor: '#4F46E5',
+                  borderRadius: 6,
+                  barThickness: 30,
+                  hoverBackgroundColor: '#4338CA'
+              }]
+          },
+          options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                  y: {
+                      beginAtZero: true,
+                      grid: { borderDash: [4, 4], drawBorder: false, color: getGridColor() },
+                      ticks: { callback: (v) => 'Rs. ' + v, color: getChartColor() }
+                  },
+                  x: {
+                      grid: { display: false },
+                      ticks: { color: getChartColor() }
+                  }
+              },
+              plugins: { legend: { display: false } },
+              animation: {
+                  duration: 2000,
+                  easing: 'easeOutQuart'
+              }
+          }
+      });
+  }
+  {% endif %}
+
+  // Daily Trend Chart
+  {% if trend_amounts %}
+  const dailyCtx = document.getElementById('dailyChart');
+  if (dailyCtx) {
+      new Chart(dailyCtx, {
+          type: 'line',
+          data: {
+              labels: {{ trend_dates|safe }},
+              datasets: [{
+                  label: 'Daily Spending',
+                  data: {{ trend_amounts|safe }},
+                  borderColor: '#10B981',
+                  backgroundColor: (ctx) => {
+                      const gradient = ctx.chart.ctx.createLinearGradient(0, 0, 0, 400);
+                      gradient.addColorStop(0, 'rgba(16, 185, 129, 0.2)');
+                      gradient.addColorStop(1, 'rgba(16, 185, 129, 0)');
+                      return gradient;
+                  },
+                  borderWidth: 3,
+                  fill: true,
+                  tension: 0.4,
+                  pointRadius: 0,
+                  pointHoverRadius: 8,
+                  pointHoverBackgroundColor: '#10B981',
+                  pointHoverBorderColor: '#fff',
+                  pointHoverBorderWidth: 2
+              }]
+          },
+          options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                  y: {
+                      beginAtZero: true,
+                      grid: { borderDash: [4, 4], drawBorder: false, color: getGridColor() },
+                      ticks: { callback: (v) => 'Rs. ' + v, color: getChartColor() }
+                  },
+                  x: {
+                      grid: { display: false },
+                      ticks: { color: getChartColor() }
+                  }
+              },
+              plugins: { legend: { display: false } },
+              interaction: {
+                  intersect: false,
+                  mode: 'index',
+              },
+          }
+      });
+  }
+  {% endif %}
+
+  function fetchSavingsTip() {
+      const btn = document.getElementById('get-tip-btn');
+      const btnText = document.getElementById('btn-text');
+      const content = document.getElementById('ai-tip-content');
+
+      // Loading State
+      btn.disabled = true;
+      btn.classList.add('opacity-75', 'cursor-not-allowed');
+      const originalText = btnText.innerText;
+      btnText.innerText = "Analyzing...";
+      content.innerHTML = '<div class="animate-pulse flex items-center gap-2"><i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Analyzing spending...</div>';
+      lucide.createIcons();
+
+      fetch("{% url 'get_savings_tip' %}")
+          .then(response => response.json())
+          .then(data => {
+              content.innerText = data.advice;
+              btnText.innerText = "Refresh Advice";
+          })
+          .catch(error => {
+              console.error('Error:', error);
+              content.innerText = "Could not fetch advice. Please try again.";
+              btnText.innerText = originalText;
+          })
+          .finally(() => {
+              btn.disabled = false;
+              btn.classList.remove('opacity-75', 'cursor-not-allowed');
+          });
+  }
+</script>
+{% endblock %}

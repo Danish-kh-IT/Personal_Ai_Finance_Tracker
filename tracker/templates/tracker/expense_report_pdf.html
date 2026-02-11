@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Expense Report</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 2cm;
+      }
+      body {
+        font-family: Helvetica, Arial, sans-serif;
+        font-size: 10pt;
+        color: #333;
+      }
+      .header {
+        text-align: center;
+        border-bottom: 2px solid #4f46e5;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+      }
+      .header h1 {
+        color: #4f46e5;
+        margin: 0;
+        font-size: 24pt;
+      }
+      .info {
+        margin-bottom: 20px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+      }
+      th {
+        background-color: #f3f4f6;
+        color: #4b5563;
+        font-weight: bold;
+        text-align: left;
+        padding: 8px;
+        border-bottom: 1px solid #e5e7eb;
+      }
+      td {
+        padding: 8px;
+        border-bottom: 1px solid #e5e7eb;
+      }
+      .total {
+        text-align: right;
+        font-size: 14pt;
+        font-weight: bold;
+        color: #4f46e5;
+        margin-top: 20px;
+      }
+      .footer {
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+        text-align: center;
+        font-size: 8pt;
+        color: #9ca3af;
+        border-top: 1px solid #e5e7eb;
+        padding-top: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>Expense History Report</h1>
+      <p>Finance Tracker</p>
+    </div>
+
+    <div class="info">
+      <p><strong>User:</strong> {{ user.username }}</p>
+      <p><strong>Date Generated:</strong> {{ today|date:"d M Y, h:i A" }}</p>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th width="20%">Date</th>
+          <th width="30%">Item</th>
+          <th width="20%">Category</th>
+          <th width="30%" align="right">Amount (Rs.)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for expense in expenses %}
+        <tr>
+          <td>{{ expense.created_at|date:"d M Y" }}</td>
+          <td>{{ expense.item }}</td>
+          <td>{{ expense.category.name|default:"Uncategorized" }}</td>
+          <td align="right">{{ expense.amount }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="total">Total Spent: Rs. {{ total_amount }}</div>
+
+    <div class="footer">
+      &copy; {{ today|date:"Y" }} Finance Tracker. All rights reserved.
+    </div>
+  </body>
+</html>
