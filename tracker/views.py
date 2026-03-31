@@ -200,8 +200,10 @@ def expense_list(request):
 
 @login_required
 def dashboard(request):
-    # Get selected month from query parameter or default to current month
-    selected_month_str = request.GET.get('month')
+    # On initial/full page load, always show current month.
+    # Month query parameter is honored for AJAX month switching.
+    is_ajax_request = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    selected_month_str = request.GET.get('month') if is_ajax_request else None
     
     if selected_month_str:
         try:
@@ -335,6 +337,11 @@ def dashboard(request):
     ).values('month').distinct().order_by('-month')
     
     available_months = [item['month'] for item in all_months if item['month']]
+
+    # Ensure current month is always available in quick select.
+    current_month_start = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    if not any(month.strftime('%Y-%m') == current_month_start.strftime('%Y-%m') for month in available_months):
+        available_months.insert(0, current_month_start)
     
     context = {
         'labels': json.dumps(labels),
