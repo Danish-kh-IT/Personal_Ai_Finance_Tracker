@@ -199,68 +199,146 @@ def expense_list(request):
 
 @login_required
 def dashboard(request):
-    # 1. Category-wise spending (Pie Chart)
-    data = Expense.objects.filter(user=request.user).values('category__name').annotate(total=Sum('amount'))
+    # Get selected month from query parameter or default to current month
+    selected_month_str = request.GET.get('month')
+    
+    if selected_month_str:
+        try:
+            selected_month = datetime.strptime(selected_month_str, '%Y-%m')
+            current_month = selected_month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        except ValueError:
+            current_month = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    else:
+        current_month = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    
+    # Calculate month boundaries
+    if current_month.month == 12:
+        next_month = current_month.replace(year=current_month.year + 1, month=1)
+    else:
+        next_month = current_month.replace(month=current_month.month + 1)
+    
+    prev_month = current_month - timedelta(days=1)
+    prev_month = prev_month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    
+    # 1. Category-wise spending (for selected month)
+    data = Expense.objects.filter(
+        user=request.user,
+        created_at__gte=current_month,
+        created_at__lt=next_month
+    ).values('category__name').annotate(total=Sum('amount'))
     
     labels = [item['category__name'] if item['category__name'] else "Uncategorized" for item in data]
     values = [float(item['total']) for item in data]
     
-    # 2. Trend Analysis - Last 30 days spending
-    end_date = timezone.now()
-    start_date = end_date - timedelta(days=30)
-    
+    # 2. Daily spending for selected month
     daily_expenses = Expense.objects.filter(
         user=request.user,
-        created_at__gte=start_date
+        created_at__gte=current_month,
+        created_at__lt=next_month
     ).annotate(
         date=TruncDate('created_at')
     ).values('date').annotate(
         total=Sum('amount')
     ).order_by('date')
     
-    trend_dates = [item['date'].strftime('%Y-%m-%d') if item['date'] else '' for item in daily_expenses]
+    trend_dates = [item['date'].strftime('%d %b') if item['date'] else '' for item in daily_expenses]
     trend_amounts = [float(item['total']) for item in daily_expenses]
     
-    # 3. Monthly Trend (Last 6 months)
-    monthly_expenses = Expense.objects.filter(
-        user=request.user
-    ).annotate(
-        month=TruncMonth('created_at')
-    ).values('month').annotate(
-        total=Sum('amount')
-    ).order_by('month')[:6]
+    # 3. Last 6 months comparison (including current month)
+    six_months_ago = current_month - timedelta(days=180)
     
-    monthly_labels = [item['month'].strftime('%b %Y') if item['month'] else '' for item in monthly_expenses]
-    monthly_values = [float(item['total']) for item in monthly_expenses]
+    # Get all months in range with their totals (even months with 0 expenses)
+    monthly_data = {}
+    temp_month = six_months_ago
+    while temp_month <= current_month:
+        next_temp = temp_month.replace(day=1) + timedelta(days=32)
+        next_temp = next_temp.replace(day=1)
+        
+        total = Expense.objects.filter(
+            user=request.user,
+            created_at__gte=temp_month,
+            created_at__lt=next_temp
+        ).aggregate(total=Sum('amount'))['total'] or 0
+        
+        monthly_data[temp_month.strftime('%b %Y')] = float(total)
+        temp_month = next_temp
     
-    # 4. Recent Transactions
-    recent_expenses = Expense.objects.filter(user=request.user).order_by('-created_at')[:5]
+    monthly_labels = list(monthly_data.keys())
+    monthly_values = list(monthly_data.values())
     
-    # 5. Budget Alerts
+    # 4. Recent Transactions (for selected month)
+    recent_expenses = Expense.objects.filter(
+        user=request.user,
+        created_at__gte=current_month,
+        created_at__lt=next_month
+    ).order_by('-created_at')[:5]
+    
+    # 5. Budget Alerts (for selected month)
     budgets = Budget.objects.filter(user=request.user)
     budget_alerts = []
     for budget in budgets:
-        spent = budget.get_spent_amount()
-        percentage = budget.get_percentage_used()
+        # For monthly budgets, check current selected month
+        if budget.period == 'monthly':
+            spent = Expense.objects.filter(
+                user=request.user,
+                category=budget.category,
+                created_at__gte=current_month,
+                created_at__lt=next_month
+            ).aggregate(total=Sum('amount'))['total'] or 0
+        else:
+            spent = budget.get_spent_amount()
+        
+        percentage = (float(spent) / float(budget.amount) * 100) if budget.amount > 0 else 0
+        
         if percentage >= 80:  # Alert if 80% or more used
             budget_alerts.append({
                 'budget': budget,
                 'spent': spent,
-                'remaining': budget.get_remaining_amount(),
+                'remaining': float(budget.amount) - float(spent),
                 'percentage': percentage,
-                'exceeded': budget.is_exceeded()
+                'exceeded': percentage >= 100
             })
     
-    # 6. Overall Statistics
-    total_expenses = Expense.objects.filter(user=request.user).count()
-    avg_expense = Expense.objects.filter(user=request.user).aggregate(avg=Sum('amount'))['avg'] or 0
-    if total_expenses > 0:
-        avg_expense = float(avg_expense) / total_expenses
+    # 6. Statistics for selected month
+    month_expenses = Expense.objects.filter(
+        user=request.user,
+        created_at__gte=current_month,
+        created_at__lt=next_month
+    )
+    total_expenses = month_expenses.count()
+    total_spent = month_expenses.aggregate(total=Sum('amount'))['total'] or 0
+    avg_expense = float(total_spent) / total_expenses if total_expenses > 0 else 0
+    
+    # Month-over-month comparison
+    prev_month_start = prev_month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    if prev_month_start.month == 12:
+        prev_month_next = prev_month_start.replace(year=prev_month_start.year + 1, month=1)
+    else:
+        prev_month_next = prev_month_start.replace(month=prev_month_start.month + 1)
+    
+    prev_month_total = Expense.objects.filter(
+        user=request.user,
+        created_at__gte=prev_month_start,
+        created_at__lt=prev_month_next
+    ).aggregate(total=Sum('amount'))['total'] or 0
+    
+    # Calculate percentage change
+    if prev_month_total > 0:
+        month_change = ((float(total_spent) - float(prev_month_total)) / float(prev_month_total)) * 100
+    else:
+        month_change = 0 if total_spent == 0 else 100
+    
+    # Get all available months for dropdown
+    all_months = Expense.objects.filter(user=request.user).annotate(
+        month=TruncMonth('created_at')
+    ).values('month').distinct().order_by('-month')
+    
+    available_months = [item['month'] for item in all_months if item['month']]
     
     context = {
         'labels': json.dumps(labels),
         'values': json.dumps(values),
-        'total_spent': sum(values) if values else 0,
+        'total_spent': float(total_spent),
         'recent_expenses': recent_expenses,
         'trend_dates': json.dumps(trend_dates),
         'trend_amounts': json.dumps(trend_amounts),
@@ -269,6 +347,15 @@ def dashboard(request):
         'budget_alerts': budget_alerts,
         'total_expenses': total_expenses,
         'avg_expense': avg_expense,
+        'current_month': current_month,
+        'current_month_str': current_month.strftime('%B %Y'),
+        'prev_month': prev_month,
+        'next_month': next_month,
+        'available_months': available_months,
+        'selected_month': selected_month_str or current_month.strftime('%Y-%m'),
+        'prev_month_total': float(prev_month_total),
+        'month_change': month_change,
+        'prev_month_str': prev_month.strftime('%B %Y'),
     }
     return render(request, 'tracker/dashboard.html', context)
 

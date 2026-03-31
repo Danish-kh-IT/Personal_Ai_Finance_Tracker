@@ -1,6 +1,6 @@
 {% extends 'tracker/base.html' %} {% block content %}
 <div class="py-6">
-  <!-- Header with Date -->
+  <!-- Header with Month Navigation -->
   <div
     class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between animate-fade-in-up"
   >
@@ -21,6 +21,44 @@
       >
         <i data-lucide="plus" class="w-4 h-4 mr-2"></i> Add Expense
       </a>
+    </div>
+  </div>
+
+  <!-- Month Navigation Bar -->
+  <div class="mb-8 glass-card rounded-xl p-4 animate-fade-in-up flex flex-col sm:flex-row items-center justify-between gap-4 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700">
+    <div class="flex items-center gap-3">
+      <!-- Previous Month Button -->
+      <a href="?month={{ prev_month|date:'Y-m' }}" class="p-2 rounded-lg hover:bg-white/50 dark:hover:bg-slate-600 transition-colors" title="Previous month">
+        <i data-lucide="chevron-left" class="w-5 h-5 text-gray-700 dark:text-gray-200"></i>
+      </a>
+      
+      <!-- Current Month Display -->
+      <div class="text-center min-w-40">
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">{{ current_month_str }}</h2>
+      </div>
+      
+      <!-- Next Month Button -->
+      <a href="?month={{ next_month|date:'Y-m' }}" class="p-2 rounded-lg hover:bg-white/50 dark:hover:bg-slate-600 transition-colors" title="Next month">
+        <i data-lucide="chevron-right" class="w-5 h-5 text-gray-700 dark:text-gray-200"></i>
+      </a>
+    </div>
+    
+    <!-- Month Selector Dropdown -->
+    <div class="flex items-center gap-2">
+      <label for="month-select" class="text-sm font-medium text-gray-700 dark:text-gray-300">Quick Select:</label>
+      <select id="month-select" onchange="if(this.value) window.location.href='?month=' + this.value;" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+        <option value="">-- Select Month --</option>
+        {% for month in available_months %}
+          <option value="{{ month|date:'Y-m' }}" {% if month|date:'Y-m' == selected_month %}selected{% endif %}>{{ month|date:'F Y' }}</option>
+        {% endfor %}
+      </select>
+      
+      <!-- Back to Current Month -->
+      {% if selected_month != current_month|date:'Y-m' %}
+      <a href="{% url 'dashboard' %}" class="px-3 py-2 text-sm font-medium text-white bg-primary hover:bg-primaryDark rounded-lg transition-colors">
+        Today
+      </a>
+      {% endif %}
     </div>
   </div>
 
@@ -92,8 +130,7 @@
             id="ai-tip-content"
             class="text-gray-600 dark:text-slate-300 leading-relaxed pl-1"
           >
-            Get personalized savings advice based on your spending patterns this
-            month.
+            Get personalized savings advice based on your spending patterns for {{ current_month_str }}.
           </div>
         </div>
         <button
@@ -202,12 +239,95 @@
     </div>
   </div>
 
-  <!-- Charts Section -->
+  <!-- Month Comparison Card -->
+  <div class="mb-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- Current Month vs Previous -->
+    <div
+      class="glass-card rounded-2xl p-6 relative overflow-hidden group hover-card-anim animate-fade-in-up"
+      style="animation-delay: 0.35s"
+    >
+      <div
+        class="absolute -right-6 -top-6 bg-gradient-to-br from-orange-400/20 to-red-500/20 w-32 h-32 rounded-full group-hover:scale-110 transition-transform duration-500"
+      ></div>
+      <div class="relative">
+        <div class="flex items-center justify-between mb-4">
+          <h3
+            class="text-sm font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider"
+          >
+            Month Comparison
+          </h3>
+          <div class="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-xl">
+            <i data-lucide="trending-up" class="w-6 h-6 text-orange-600 dark:text-orange-400"></i>
+          </div>
+        </div>
+        <div class="space-y-4">
+          <div>
+            <p class="text-xs text-gray-500 dark:text-slate-400 mb-1">Current Month</p>
+            <p class="text-3xl font-bold text-gray-900 dark:text-white">Rs. {{ total_spent|floatformat:0 }}</p>
+          </div>
+          <div class="border-t border-gray-200 dark:border-slate-600 pt-4">
+            <p class="text-xs text-gray-500 dark:text-slate-400 mb-1">{{ prev_month_str }}</p>
+            <p class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Rs. {{ prev_month_total|floatformat:0 }}</p>
+            {% if month_change >= 0 %}
+              <div class="flex items-center gap-2 text-red-600 dark:text-red-400 font-semibold">
+                <i data-lucide="trending-up" class="w-4 h-4"></i>
+                <span>+{{ month_change|floatformat:1 }}% compared to last month</span>
+              </div>
+            {% else %}
+              <div class="flex items-center gap-2 text-green-600 dark:text-green-400 font-semibold">
+                <i data-lucide="trending-down" class="w-4 h-4"></i>
+                <span>{{ month_change|floatformat:1 }}% compared to last month</span>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Month Average Comparison -->
+    <div
+      class="glass-card rounded-2xl p-6 relative overflow-hidden group hover-card-anim animate-fade-in-up"
+      style="animation-delay: 0.4s"
+    >
+      <div
+        class="absolute -right-6 -top-6 bg-gradient-to-br from-cyan-400/20 to-blue-500/20 w-32 h-32 rounded-full group-hover:scale-110 transition-transform duration-500"
+      ></div>
+      <div class="relative">
+        <div class="flex items-center justify-between mb-4">
+          <h3
+            class="text-sm font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider"
+          >
+            Daily Breakdown
+          </h3>
+          <div class="p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-xl">
+            <i data-lucide="bar-chart-3" class="w-6 h-6 text-cyan-600 dark:text-cyan-400"></i>
+          </div>
+        </div>
+        <div class="space-y-4">
+          <div>
+            <p class="text-xs text-gray-500 dark:text-slate-400 mb-1">Total Transactions</p>
+            <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ total_expenses }}</p>
+          </div>
+          <div class="border-t border-gray-200 dark:border-slate-600 pt-4">
+            <p class="text-xs text-gray-500 dark:text-slate-400 mb-1">Daily Average</p>
+            <p class="text-2xl font-bold text-gray-900 dark:text-white">Rs. {{ avg_expense|floatformat:0 }}</p>
+            {% if total_expenses > 0 %}
+              <p class="text-sm text-gray-600 dark:text-slate-300 mt-2">
+                Across {{ total_expenses }} transactions in {{ current_month|date:'d' }} days
+              </p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Section (updated) -->
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-    <!-- Monthly Trend -->
+    <!-- Monthly Trend with Highlight -->
     <div
       class="glass-card rounded-2xl p-6 animate-fade-in-up"
-      style="animation-delay: 0.4s"
+      style="animation-delay: 0.45s"
     >
       <h3
         class="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2"
@@ -218,7 +338,7 @@
             class="w-5 h-5 text-indigo-600 dark:text-indigo-400"
           ></i>
         </div>
-        Monthly Spending Trend
+        Last 6 Months Trend
       </h3>
       <div class="h-64 relative">
         {% if monthly_values %}
@@ -241,10 +361,10 @@
       <h3
         class="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2"
       >
-        <div class="p-1.5 rounded-lg bg-emerald-100">
-          <i data-lucide="pie-chart" class="w-5 h-5 text-emerald-600"></i>
+        <div class="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
+          <i data-lucide="pie-chart" class="w-5 h-5 text-emerald-600 dark:text-emerald-400"></i>
         </div>
-        Category Breakdown
+        Category Breakdown - {{ current_month_str }}
       </h3>
       <div class="h-64 relative flex items-center justify-center">
         {% if values %}
@@ -265,21 +385,21 @@
     class="glass-card rounded-2xl p-6 mb-8 animate-fade-in-up"
     style="animation-delay: 0.6s"
   >
-    <h3 class="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+    <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
       <div class="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/30">
         <i
           data-lucide="activity"
           class="w-5 h-5 text-blue-600 dark:text-blue-400"
         ></i>
       </div>
-      Daily Spending (Last 30 Days)
+      Daily Spending - {{ current_month_str }}
     </h3>
     <div class="h-64 relative">
       {% if trend_amounts %}
       <canvas id="dailyChart"></canvas>
       {% else %}
       <div
-        class="absolute inset-0 flex items-center justify-center text-gray-400 bg-gray-50/50 rounded-lg"
+        class="absolute inset-0 flex items-center justify-center text-gray-400 bg-gray-50/50 dark:bg-slate-800/20 rounded-lg"
       >
         No recent activity
       </div>
@@ -471,9 +591,12 @@
 </div>
 
 <!-- Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
 <script>
+  // Ensure charts can be rendered
   Chart.defaults.font.family = "'Outfit', sans-serif";
+  Chart.defaults.responsive = true;
+  Chart.defaults.maintainAspectRatio = false;
 
   function getChartColor() {
       return document.documentElement.classList.contains('dark') ? '#94a3b8' : '#6b7280';
@@ -483,139 +606,188 @@
       return document.documentElement.classList.contains('dark') ? 'rgba(255, 255, 255, 0.05)' : '#f1f5f9';
   }
 
-  Chart.defaults.color = getChartColor();
+  // Wait for DOM to be ready
+  document.addEventListener('DOMContentLoaded', function() {
+    
+    // Category Pie Chart
+    const categoryCtx = document.getElementById('categoryChart');
+    if (categoryCtx && typeof(categoryCtx.getContext) !== 'undefined') {
+        try {
+            const categoryChart = new Chart(categoryCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: {{ labels|safe }},
+                    datasets: [{
+                        data: {{ values|safe }},
+                        backgroundColor: ['#4F46E5', '#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#6366F1'],
+                        borderWidth: 0,
+                        hoverOffset: 10
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 20,
+                                color: getChartColor(),
+                                font: {family: "'Outfit', sans-serif"}
+                            }
+                        }
+                    },
+                    cutout: '75%',
+                    animation: {
+                        animateScale: true,
+                        animateRotate: true
+                    }
+                }
+            });
+        } catch(e) {
+            console.error('Error creating category chart:', e);
+        }
+    }
 
-  // Category Pie Chart
-  {% if values %}
-  const categoryCtx = document.getElementById('categoryChart');
-  if (categoryCtx) {
-      new Chart(categoryCtx, {
-          type: 'doughnut',
-          data: {
-              labels: {{ labels|safe }},
-              datasets: [{
-                  data: {{ values|safe }},
-                  backgroundColor: ['#4F46E5', '#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#6366F1'],
-                  borderWidth: 0,
-                  hoverOffset: 10
-              }]
-          },
-          options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: {
-                  legend: {
-                      position: 'right',
-                      labels: {
-                          usePointStyle: true,
-                          padding: 20,
-                          color: getChartColor(),
-                          font: {family: "'Outfit', sans-serif"}
-                      }
-                  }
-              },
-              cutout: '75%',
-              animation: {
-                  animateScale: true,
-                  animateRotate: true
-              }
-          }
-      });
-  }
-  {% endif %}
+    // Monthly Trend Chart
+    const monthlyCtx = document.getElementById('monthlyChart');
+    if (monthlyCtx && typeof(monthlyCtx.getContext) !== 'undefined') {
+        try {
+            const monthlyChart = new Chart(monthlyCtx, {
+                type: 'bar',
+                data: {
+                    labels: {{ monthly_labels|safe }},
+                    datasets: [{
+                        label: 'Monthly Spending',
+                        data: {{ monthly_values|safe }},
+                        backgroundColor: ['#4F46E5', '#6366F1', '#818CF8', '#A5B4FC', '#C7D2FE', '#E0E7FF'],
+                        borderRadius: 8,
+                        barThickness: 'flex',
+                        maxBarThickness: 50,
+                        hoverBackgroundColor: '#4338CA'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'x',
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { borderDash: [4, 4], drawBorder: false, color: getGridColor() },
+                            ticks: { 
+                                callback: (v) => 'Rs. ' + v.toLocaleString(), 
+                                color: getChartColor()
+                            }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: getChartColor() }
+                        }
+                    },
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            padding: 12,
+                            titleFont: { size: 14 },
+                            bodyFont: { size: 13 },
+                            borderColor: '#4F46E5',
+                            borderWidth: 1,
+                            callbacks: {
+                                label: (context) => 'Rs. ' + context.parsed.y.toLocaleString()
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 800,
+                        easing: 'easeOutQuart'
+                    }
+                }
+            });
+        } catch(e) {
+            console.error('Error creating monthly chart:', e);
+        }
+    }
 
-  // Monthly Trend Chart
-  {% if monthly_values %}
-  const monthlyCtx = document.getElementById('monthlyChart');
-  if (monthlyCtx) {
-      new Chart(monthlyCtx, {
-          type: 'bar',
-          data: {
-              labels: {{ monthly_labels|safe }},
-              datasets: [{
-                  label: 'Spending',
-                  data: {{ monthly_values|safe }},
-                  backgroundColor: '#4F46E5',
-                  borderRadius: 6,
-                  barThickness: 30,
-                  hoverBackgroundColor: '#4338CA'
-              }]
-          },
-          options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              scales: {
-                  y: {
-                      beginAtZero: true,
-                      grid: { borderDash: [4, 4], drawBorder: false, color: getGridColor() },
-                      ticks: { callback: (v) => 'Rs. ' + v, color: getChartColor() }
-                  },
-                  x: {
-                      grid: { display: false },
-                      ticks: { color: getChartColor() }
-                  }
-              },
-              plugins: { legend: { display: false } },
-              animation: {
-                  duration: 2000,
-                  easing: 'easeOutQuart'
-              }
-          }
-      });
-  }
-  {% endif %}
+    // Daily Trend Chart
+    const dailyCtx = document.getElementById('dailyChart');
+    if (dailyCtx && typeof(dailyCtx.getContext) !== 'undefined') {
+        try {
+            const dailyChart = new Chart(dailyCtx, {
+                type: 'line',
+                data: {
+                    labels: {{ trend_dates|safe }},
+                    datasets: [{
+                        label: 'Daily Spending',
+                        data: {{ trend_amounts|safe }},
+                        borderColor: '#10B981',
+                        backgroundColor: (context) => {
+                            const ctx = context.chart.ctx;
+                            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+                            gradient.addColorStop(0, 'rgba(16, 185, 129, 0.3)');
+                            gradient.addColorStop(1, 'rgba(16, 185, 129, 0)');
+                            return gradient;
+                        },
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#10B981',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointHoverRadius: 8,
+                        pointHoverBackgroundColor: '#10B981',
+                        pointHoverBorderColor: '#fff',
+                        pointHoverBorderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { borderDash: [4, 4], drawBorder: false, color: getGridColor() },
+                            ticks: { 
+                                callback: (v) => 'Rs. ' + v.toLocaleString(), 
+                                color: getChartColor()
+                            }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: getChartColor() }
+                        }
+                    },
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            padding: 12,
+                            borderColor: '#10B981',
+                            borderWidth: 1,
+                            callbacks: {
+                                label: (context) => 'Rs. ' + context.parsed.y.toLocaleString()
+                            }
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index',
+                    },
+                    animation: {
+                        duration: 800,
+                        easing: 'easeOutQuart'
+                    }
+                }
+            });
+        } catch(e) {
+            console.error('Error creating daily chart:', e);
+        }
+    }
 
-  // Daily Trend Chart
-  {% if trend_amounts %}
-  const dailyCtx = document.getElementById('dailyChart');
-  if (dailyCtx) {
-      new Chart(dailyCtx, {
-          type: 'line',
-          data: {
-              labels: {{ trend_dates|safe }},
-              datasets: [{
-                  label: 'Daily Spending',
-                  data: {{ trend_amounts|safe }},
-                  borderColor: '#10B981',
-                  backgroundColor: (ctx) => {
-                      const gradient = ctx.chart.ctx.createLinearGradient(0, 0, 0, 400);
-                      gradient.addColorStop(0, 'rgba(16, 185, 129, 0.2)');
-                      gradient.addColorStop(1, 'rgba(16, 185, 129, 0)');
-                      return gradient;
-                  },
-                  borderWidth: 3,
-                  fill: true,
-                  tension: 0.4,
-                  pointRadius: 0,
-                  pointHoverRadius: 8,
-                  pointHoverBackgroundColor: '#10B981',
-                  pointHoverBorderColor: '#fff',
-                  pointHoverBorderWidth: 2
-              }]
-          },
-          options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              scales: {
-                  y: {
-                      beginAtZero: true,
-                      grid: { borderDash: [4, 4], drawBorder: false, color: getGridColor() },
-                      ticks: { callback: (v) => 'Rs. ' + v, color: getChartColor() }
-                  },
-                  x: {
-                      grid: { display: false },
-                      ticks: { color: getChartColor() }
-                  }
-              },
-              plugins: { legend: { display: false } },
-              interaction: {
-                  intersect: false,
-                  mode: 'index',
-              },
-          }
-      });
-  }
-  {% endif %}
+  }); // DOMContentLoaded
 
   function fetchSavingsTip() {
       const btn = document.getElementById('get-tip-btn');
