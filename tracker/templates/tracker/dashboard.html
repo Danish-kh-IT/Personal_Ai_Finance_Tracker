@@ -25,7 +25,7 @@
   </div>
 
   <!-- Month Navigation Bar -->
-  <div class="mb-8 glass-card rounded-xl p-4 animate-fade-in-up flex flex-col sm:flex-row items-center justify-between gap-4 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700">
+  <div class="relative z-40 mb-8 glass-card rounded-xl p-4 animate-fade-in-up flex flex-col sm:flex-row items-center justify-between gap-4 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700">
     <div class="flex items-center gap-3">
       <!-- Previous Month Button -->
       <a href="?month={{ prev_month|date:'Y-m' }}" class="month-nav-link p-2 rounded-lg hover:bg-white/50 dark:hover:bg-slate-600 transition-colors" title="Previous month">
@@ -46,7 +46,7 @@
     <!-- Month Selector Dropdown -->
     <div class="flex items-center gap-3">
       <label for="month-picker-toggle" class="text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-400">Quick Select</label>
-      <div class="relative">
+      <div class="relative z-50">
         <select id="month-select" class="hidden" aria-hidden="true" tabindex="-1">
           <option value="">Select Month</option>
           {% for month in available_months %}
@@ -69,7 +69,7 @@
           </span>
         </button>
 
-        <div id="month-picker-panel" class="hidden absolute right-0 mt-2 w-64 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-2xl z-30 overflow-hidden">
+        <div id="month-picker-panel" class="hidden absolute top-full right-0 mt-2 w-64 rounded-xl border border-slate-200 dark:border-slate-600 bg-white/100 dark:bg-slate-800/100 shadow-2xl ring-1 ring-black/5 dark:ring-white/10 z-[120] overflow-hidden backdrop-blur-sm">
           <div class="p-2 border-b border-slate-100 dark:border-slate-700">
             <input
               id="month-picker-search"
