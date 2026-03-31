@@ -1,5 +1,5 @@
 {% extends 'tracker/base.html' %} {% block content %}
-<div class="py-6">
+<div class="py-6" id="dashboard-content">
   <!-- Header with Month Navigation -->
   <div
     class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between animate-fade-in-up"
@@ -28,7 +28,7 @@
   <div class="mb-8 glass-card rounded-xl p-4 animate-fade-in-up flex flex-col sm:flex-row items-center justify-between gap-4 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700">
     <div class="flex items-center gap-3">
       <!-- Previous Month Button -->
-      <a href="?month={{ prev_month|date:'Y-m' }}" class="p-2 rounded-lg hover:bg-white/50 dark:hover:bg-slate-600 transition-colors" title="Previous month">
+      <a href="?month={{ prev_month|date:'Y-m' }}" class="month-nav-link p-2 rounded-lg hover:bg-white/50 dark:hover:bg-slate-600 transition-colors" title="Previous month">
         <i data-lucide="chevron-left" class="w-5 h-5 text-gray-700 dark:text-gray-200"></i>
       </a>
       
@@ -38,29 +38,87 @@
       </div>
       
       <!-- Next Month Button -->
-      <a href="?month={{ next_month|date:'Y-m' }}" class="p-2 rounded-lg hover:bg-white/50 dark:hover:bg-slate-600 transition-colors" title="Next month">
+      <a href="?month={{ next_month|date:'Y-m' }}" class="month-nav-link p-2 rounded-lg hover:bg-white/50 dark:hover:bg-slate-600 transition-colors" title="Next month">
         <i data-lucide="chevron-right" class="w-5 h-5 text-gray-700 dark:text-gray-200"></i>
       </a>
     </div>
     
     <!-- Month Selector Dropdown -->
-    <div class="flex items-center gap-2">
-      <label for="month-select" class="text-sm font-medium text-gray-700 dark:text-gray-300">Quick Select:</label>
-      <select id="month-select" onchange="if(this.value) window.location.href='?month=' + this.value;" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary">
-        <option value="">-- Select Month --</option>
-        {% for month in available_months %}
-          <option value="{{ month|date:'Y-m' }}" {% if month|date:'Y-m' == selected_month %}selected{% endif %}>{{ month|date:'F Y' }}</option>
-        {% endfor %}
-      </select>
+    <div class="flex items-center gap-3">
+      <label for="month-picker-toggle" class="text-xs font-semibold tracking-wide uppercase text-slate-500 dark:text-slate-400">Quick Select</label>
+      <div class="relative">
+        <select id="month-select" class="hidden" aria-hidden="true" tabindex="-1">
+          <option value="">Select Month</option>
+          {% for month in available_months %}
+            <option value="{{ month|date:'Y-m' }}" {% if month|date:'Y-m' == selected_month %}selected{% endif %}>{{ month|date:'F Y' }}</option>
+          {% endfor %}
+        </select>
+
+        <button
+          id="month-picker-toggle"
+          type="button"
+          class="min-w-52 pl-4 pr-11 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-white/90 dark:bg-slate-700/90 text-left text-slate-800 dark:text-slate-100 text-sm font-medium shadow-sm hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+          aria-haspopup="listbox"
+          aria-expanded="false"
+        >
+          <span id="month-picker-label">{{ current_month_str }}</span>
+          <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-400 dark:text-slate-300">
+            <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+            </svg>
+          </span>
+        </button>
+
+        <div id="month-picker-panel" class="hidden absolute right-0 mt-2 w-64 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-2xl z-30 overflow-hidden">
+          <div class="p-2 border-b border-slate-100 dark:border-slate-700">
+            <input
+              id="month-picker-search"
+              type="text"
+              placeholder="Search month..."
+              class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+            />
+          </div>
+          <ul id="month-picker-options" class="max-h-56 overflow-y-auto py-1" role="listbox" aria-label="Months">
+            {% for month in available_months %}
+            <li>
+              <button
+                type="button"
+                class="month-picker-option w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-primary/10 dark:hover:bg-primary/20 transition-colors"
+                data-month="{{ month|date:'Y-m' }}"
+                data-label="{{ month|date:'F Y'|lower }}"
+              >
+                {{ month|date:'F Y' }}
+              </button>
+            </li>
+            {% endfor %}
+          </ul>
+          <div id="month-picker-empty" class="hidden px-3 py-3 text-sm text-slate-500 dark:text-slate-400">
+            No month found
+          </div>
+        </div>
+      </div>
       
       <!-- Back to Current Month -->
       {% if selected_month != current_month|date:'Y-m' %}
-      <a href="{% url 'dashboard' %}" class="px-3 py-2 text-sm font-medium text-white bg-primary hover:bg-primaryDark rounded-lg transition-colors">
+      <a href="{% url 'dashboard' %}" class="month-nav-link px-3 py-2 text-sm font-medium text-white bg-primary hover:bg-primaryDark rounded-lg transition-colors">
         Today
       </a>
       {% endif %}
     </div>
   </div>
+
+  <script id="dashboard-json" type="application/json">
+    {
+      "labels": {{ labels|safe }},
+      "values": {{ values|safe }},
+      "monthly_labels": {{ monthly_labels|safe }},
+      "monthly_values": {{ monthly_values|safe }},
+      "trend_dates": {{ trend_dates|safe }},
+      "trend_amounts": {{ trend_amounts|safe }},
+      "selected_month": "{{ selected_month }}",
+      "current_month_str": "{{ current_month_str }}"
+    }
+  </script>
 
   <!-- Budget Alerts -->
   {% if budget_alerts %}
@@ -593,206 +651,410 @@
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
 <script>
-  // Ensure charts can be rendered
-  Chart.defaults.font.family = "'Outfit', sans-serif";
-  Chart.defaults.responsive = true;
-  Chart.defaults.maintainAspectRatio = false;
+    // Ensure charts can be rendered
+    Chart.defaults.font.family = "'Outfit', sans-serif";
+    Chart.defaults.responsive = true;
+    Chart.defaults.maintainAspectRatio = false;
 
-  function getChartColor() {
+    const chartInstances = {
+      category: null,
+      monthly: null,
+      daily: null,
+    };
+
+    let isMonthLoading = false;
+
+    function getChartColor() {
       return document.documentElement.classList.contains('dark') ? '#94a3b8' : '#6b7280';
-  }
+    }
 
-  function getGridColor() {
+    function getGridColor() {
       return document.documentElement.classList.contains('dark') ? 'rgba(255, 255, 255, 0.05)' : '#f1f5f9';
-  }
-
-  // Wait for DOM to be ready
-  document.addEventListener('DOMContentLoaded', function() {
-    
-    // Category Pie Chart
-    const categoryCtx = document.getElementById('categoryChart');
-    if (categoryCtx && typeof(categoryCtx.getContext) !== 'undefined') {
-        try {
-            const categoryChart = new Chart(categoryCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: {{ labels|safe }},
-                    datasets: [{
-                        data: {{ values|safe }},
-                        backgroundColor: ['#4F46E5', '#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#6366F1'],
-                        borderWidth: 0,
-                        hoverOffset: 10
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'right',
-                            labels: {
-                                usePointStyle: true,
-                                padding: 20,
-                                color: getChartColor(),
-                                font: {family: "'Outfit', sans-serif"}
-                            }
-                        }
-                    },
-                    cutout: '75%',
-                    animation: {
-                        animateScale: true,
-                        animateRotate: true
-                    }
-                }
-            });
-        } catch(e) {
-            console.error('Error creating category chart:', e);
-        }
     }
 
-    // Monthly Trend Chart
-    const monthlyCtx = document.getElementById('monthlyChart');
-    if (monthlyCtx && typeof(monthlyCtx.getContext) !== 'undefined') {
-        try {
-            const monthlyChart = new Chart(monthlyCtx, {
-                type: 'bar',
-                data: {
-                    labels: {{ monthly_labels|safe }},
-                    datasets: [{
-                        label: 'Monthly Spending',
-                        data: {{ monthly_values|safe }},
-                        backgroundColor: ['#4F46E5', '#6366F1', '#818CF8', '#A5B4FC', '#C7D2FE', '#E0E7FF'],
-                        borderRadius: 8,
-                        barThickness: 'flex',
-                        maxBarThickness: 50,
-                        hoverBackgroundColor: '#4338CA'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    indexAxis: 'x',
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: { borderDash: [4, 4], drawBorder: false, color: getGridColor() },
-                            ticks: { 
-                                callback: (v) => 'Rs. ' + v.toLocaleString(), 
-                                color: getChartColor()
-                            }
-                        },
-                        x: {
-                            grid: { display: false },
-                            ticks: { color: getChartColor() }
-                        }
-                    },
-                    plugins: { 
-                        legend: { display: false },
-                        tooltip: {
-                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                            padding: 12,
-                            titleFont: { size: 14 },
-                            bodyFont: { size: 13 },
-                            borderColor: '#4F46E5',
-                            borderWidth: 1,
-                            callbacks: {
-                                label: (context) => 'Rs. ' + context.parsed.y.toLocaleString()
-                            }
-                        }
-                    },
-                    animation: {
-                        duration: 800,
-                        easing: 'easeOutQuart'
-                    }
-                }
-            });
-        } catch(e) {
-            console.error('Error creating monthly chart:', e);
-        }
+    function parseDashboardData() {
+      const node = document.getElementById('dashboard-json');
+      if (!node) {
+        return {
+          labels: [],
+          values: [],
+          monthly_labels: [],
+          monthly_values: [],
+          trend_dates: [],
+          trend_amounts: [],
+        };
+      }
+
+      try {
+        return JSON.parse(node.textContent);
+      } catch (error) {
+        console.error('Unable to parse dashboard data json:', error);
+        return {
+          labels: [],
+          values: [],
+          monthly_labels: [],
+          monthly_values: [],
+          trend_dates: [],
+          trend_amounts: [],
+        };
+      }
     }
 
-    // Daily Trend Chart
-    const dailyCtx = document.getElementById('dailyChart');
-    if (dailyCtx && typeof(dailyCtx.getContext) !== 'undefined') {
-        try {
-            const dailyChart = new Chart(dailyCtx, {
-                type: 'line',
-                data: {
-                    labels: {{ trend_dates|safe }},
-                    datasets: [{
-                        label: 'Daily Spending',
-                        data: {{ trend_amounts|safe }},
-                        borderColor: '#10B981',
-                        backgroundColor: (context) => {
-                            const ctx = context.chart.ctx;
-                            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-                            gradient.addColorStop(0, 'rgba(16, 185, 129, 0.3)');
-                            gradient.addColorStop(1, 'rgba(16, 185, 129, 0)');
-                            return gradient;
-                        },
-                        borderWidth: 3,
-                        fill: true,
-                        tension: 0.4,
-                        pointRadius: 3,
-                        pointBackgroundColor: '#10B981',
-                        pointBorderColor: '#fff',
-                        pointBorderWidth: 2,
-                        pointHoverRadius: 8,
-                        pointHoverBackgroundColor: '#10B981',
-                        pointHoverBorderColor: '#fff',
-                        pointHoverBorderWidth: 2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: { borderDash: [4, 4], drawBorder: false, color: getGridColor() },
-                            ticks: { 
-                                callback: (v) => 'Rs. ' + v.toLocaleString(), 
-                                color: getChartColor()
-                            }
-                        },
-                        x: {
-                            grid: { display: false },
-                            ticks: { color: getChartColor() }
-                        }
-                    },
-                    plugins: { 
-                        legend: { display: false },
-                        tooltip: {
-                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                            padding: 12,
-                            borderColor: '#10B981',
-                            borderWidth: 1,
-                            callbacks: {
-                                label: (context) => 'Rs. ' + context.parsed.y.toLocaleString()
-                            }
-                        }
-                    },
-                    interaction: {
-                        intersect: false,
-                        mode: 'index',
-                    },
-                    animation: {
-                        duration: 800,
-                        easing: 'easeOutQuart'
-                    }
-                }
-            });
-        } catch(e) {
-            console.error('Error creating daily chart:', e);
+    function destroyCharts() {
+      Object.keys(chartInstances).forEach((key) => {
+        if (chartInstances[key]) {
+          chartInstances[key].destroy();
+          chartInstances[key] = null;
         }
+      });
     }
 
-  }); // DOMContentLoaded
+    function initCharts() {
+      destroyCharts();
+      const dashboardData = parseDashboardData();
+
+      const categoryCtx = document.getElementById('categoryChart');
+      if (categoryCtx && Array.isArray(dashboardData.values) && dashboardData.values.length > 0) {
+        try {
+          chartInstances.category = new Chart(categoryCtx, {
+            type: 'doughnut',
+            data: {
+              labels: dashboardData.labels,
+              datasets: [{
+                data: dashboardData.values,
+                backgroundColor: ['#4F46E5', '#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#6366F1'],
+                borderWidth: 0,
+                hoverOffset: 10
+              }]
+            },
+            options: {
+              plugins: {
+                legend: {
+                  position: 'right',
+                  labels: {
+                    usePointStyle: true,
+                    padding: 20,
+                    color: getChartColor(),
+                    font: { family: "'Outfit', sans-serif" }
+                  }
+                }
+              },
+              cutout: '75%',
+              animation: {
+                animateScale: true,
+                animateRotate: true
+              }
+            }
+          });
+        } catch(e) {
+          console.error('Error creating category chart:', e);
+        }
+      }
+
+      const monthlyCtx = document.getElementById('monthlyChart');
+      if (monthlyCtx && Array.isArray(dashboardData.monthly_values) && dashboardData.monthly_values.length > 0) {
+        try {
+          chartInstances.monthly = new Chart(monthlyCtx, {
+            type: 'bar',
+            data: {
+              labels: dashboardData.monthly_labels,
+              datasets: [{
+                label: 'Monthly Spending',
+                data: dashboardData.monthly_values,
+                backgroundColor: ['#4F46E5', '#6366F1', '#818CF8', '#A5B4FC', '#C7D2FE', '#E0E7FF'],
+                borderRadius: 8,
+                barThickness: 'flex',
+                maxBarThickness: 50,
+                hoverBackgroundColor: '#4338CA'
+              }]
+            },
+            options: {
+              indexAxis: 'x',
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  grid: { borderDash: [4, 4], drawBorder: false, color: getGridColor() },
+                  ticks: {
+                    callback: (v) => 'Rs. ' + Number(v).toLocaleString(),
+                    color: getChartColor()
+                  }
+                },
+                x: {
+                  grid: { display: false },
+                  ticks: { color: getChartColor() }
+                }
+              },
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                  padding: 12,
+                  titleFont: { size: 14 },
+                  bodyFont: { size: 13 },
+                  borderColor: '#4F46E5',
+                  borderWidth: 1,
+                  callbacks: {
+                    label: (context) => 'Rs. ' + Number(context.parsed.y).toLocaleString()
+                  }
+                }
+              },
+              animation: {
+                duration: 800,
+                easing: 'easeOutQuart'
+              }
+            }
+          });
+        } catch(e) {
+          console.error('Error creating monthly chart:', e);
+        }
+      }
+
+      const dailyCtx = document.getElementById('dailyChart');
+      if (dailyCtx && Array.isArray(dashboardData.trend_amounts) && dashboardData.trend_amounts.length > 0) {
+        try {
+          chartInstances.daily = new Chart(dailyCtx, {
+            type: 'line',
+            data: {
+              labels: dashboardData.trend_dates,
+              datasets: [{
+                label: 'Daily Spending',
+                data: dashboardData.trend_amounts,
+                borderColor: '#10B981',
+                backgroundColor: (context) => {
+                  const ctx = context.chart.ctx;
+                  const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+                  gradient.addColorStop(0, 'rgba(16, 185, 129, 0.3)');
+                  gradient.addColorStop(1, 'rgba(16, 185, 129, 0)');
+                  return gradient;
+                },
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 3,
+                pointBackgroundColor: '#10B981',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointHoverRadius: 8,
+                pointHoverBackgroundColor: '#10B981',
+                pointHoverBorderColor: '#fff',
+                pointHoverBorderWidth: 2
+              }]
+            },
+            options: {
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  grid: { borderDash: [4, 4], drawBorder: false, color: getGridColor() },
+                  ticks: {
+                    callback: (v) => 'Rs. ' + Number(v).toLocaleString(),
+                    color: getChartColor()
+                  }
+                },
+                x: {
+                  grid: { display: false },
+                  ticks: { color: getChartColor() }
+                }
+              },
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                  padding: 12,
+                  borderColor: '#10B981',
+                  borderWidth: 1,
+                  callbacks: {
+                    label: (context) => 'Rs. ' + Number(context.parsed.y).toLocaleString()
+                  }
+                }
+              },
+              interaction: {
+                intersect: false,
+                mode: 'index',
+              },
+              animation: {
+                duration: 800,
+                easing: 'easeOutQuart'
+              }
+            }
+          });
+        } catch(e) {
+          console.error('Error creating daily chart:', e);
+        }
+      }
+    }
+
+    async function updateDashboardMonth(url, pushState = true) {
+      if (isMonthLoading) return;
+      isMonthLoading = true;
+
+      const contentNode = document.getElementById('dashboard-content');
+      if (contentNode) {
+        contentNode.classList.add('opacity-70', 'pointer-events-none', 'transition-opacity');
+      }
+
+      try {
+        const response = await fetch(url, {
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        });
+        const html = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const newContent = doc.getElementById('dashboard-content');
+        const currentContent = document.getElementById('dashboard-content');
+
+        if (!newContent || !currentContent) {
+          window.location.href = url;
+          return;
+        }
+
+        currentContent.replaceWith(newContent);
+
+        if (pushState) {
+          window.history.pushState({}, '', url);
+        }
+
+        bindMonthControls();
+        initCharts();
+        if (window.lucide) {
+          lucide.createIcons();
+        }
+      } catch (error) {
+        console.error('Failed to update dashboard month:', error);
+        window.location.href = url;
+      } finally {
+        isMonthLoading = false;
+        const refreshedContentNode = document.getElementById('dashboard-content');
+        if (refreshedContentNode) {
+          refreshedContentNode.classList.remove('opacity-70', 'pointer-events-none', 'transition-opacity');
+        }
+      }
+    }
+
+    function bindMonthControls() {
+      const dropdown = document.getElementById('month-select');
+      if (dropdown) {
+        dropdown.addEventListener('change', function() {
+          if (!this.value) return;
+          const url = new URL(window.location.href);
+          url.searchParams.set('month', this.value);
+          updateDashboardMonth(url.toString());
+        });
+      }
+
+      const pickerToggle = document.getElementById('month-picker-toggle');
+      const pickerPanel = document.getElementById('month-picker-panel');
+      const pickerSearch = document.getElementById('month-picker-search');
+      const pickerLabel = document.getElementById('month-picker-label');
+      const pickerOptions = Array.from(document.querySelectorAll('.month-picker-option'));
+      const pickerEmpty = document.getElementById('month-picker-empty');
+
+      if (dropdown && pickerLabel) {
+        const selectedOption = dropdown.options[dropdown.selectedIndex];
+        if (selectedOption && selectedOption.value) {
+          pickerLabel.textContent = selectedOption.textContent.trim();
+        }
+      }
+
+      if (pickerToggle && pickerPanel) {
+        pickerToggle.addEventListener('click', function(event) {
+          event.stopPropagation();
+          const isHidden = pickerPanel.classList.contains('hidden');
+          pickerPanel.classList.toggle('hidden', !isHidden);
+          pickerToggle.setAttribute('aria-expanded', String(isHidden));
+
+          if (isHidden && pickerSearch) {
+            pickerSearch.value = '';
+            pickerOptions.forEach((option) => {
+              option.closest('li').classList.remove('hidden');
+            });
+            if (pickerEmpty) pickerEmpty.classList.add('hidden');
+            pickerSearch.focus();
+          }
+        });
+      }
+
+      if (pickerSearch) {
+        pickerSearch.addEventListener('input', function() {
+          const term = this.value.trim().toLowerCase();
+          let visibleCount = 0;
+
+          pickerOptions.forEach((option) => {
+            const shouldShow = !term || option.dataset.label.includes(term);
+            option.closest('li').classList.toggle('hidden', !shouldShow);
+            if (shouldShow) visibleCount += 1;
+          });
+
+          if (pickerEmpty) {
+            pickerEmpty.classList.toggle('hidden', visibleCount !== 0);
+          }
+        });
+      }
+
+      pickerOptions.forEach((option) => {
+        option.addEventListener('click', function() {
+          const monthValue = this.dataset.month;
+          const monthLabel = this.textContent.trim();
+          if (!dropdown || !monthValue) return;
+
+          dropdown.value = monthValue;
+          if (pickerLabel) {
+            pickerLabel.textContent = monthLabel;
+          }
+          if (pickerPanel) {
+            pickerPanel.classList.add('hidden');
+          }
+          if (pickerToggle) {
+            pickerToggle.setAttribute('aria-expanded', 'false');
+          }
+
+          dropdown.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+      });
+
+      if (window.__monthPickerOutsideHandler) {
+        document.removeEventListener('click', window.__monthPickerOutsideHandler);
+      }
+
+      window.__monthPickerOutsideHandler = function(event) {
+        if (!pickerPanel || !pickerToggle) return;
+        const insideToggle = pickerToggle.contains(event.target);
+        const insidePanel = pickerPanel.contains(event.target);
+        if (!insideToggle && !insidePanel) {
+          pickerPanel.classList.add('hidden');
+          pickerToggle.setAttribute('aria-expanded', 'false');
+        }
+      };
+      document.addEventListener('click', window.__monthPickerOutsideHandler);
+
+      document.querySelectorAll('.month-nav-link').forEach((node) => {
+        node.addEventListener('click', function(event) {
+          event.preventDefault();
+          const url = this.getAttribute('href');
+          if (!url) return;
+          updateDashboardMonth(url);
+        });
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      bindMonthControls();
+      initCharts();
+
+      window.addEventListener('popstate', function() {
+        updateDashboardMonth(window.location.href, false);
+      });
+    });
 
   function fetchSavingsTip() {
       const btn = document.getElementById('get-tip-btn');
       const btnText = document.getElementById('btn-text');
       const content = document.getElementById('ai-tip-content');
+      const dashboardData = parseDashboardData();
+      const selectedMonth = dashboardData.selected_month ||
+        (document.getElementById('month-select') ? document.getElementById('month-select').value : '') ||
+        new URLSearchParams(window.location.search).get('month');
 
       // Loading State
       btn.disabled = true;
@@ -802,7 +1064,11 @@
       content.innerHTML = '<div class="animate-pulse flex items-center gap-2"><i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Analyzing spending...</div>';
       lucide.createIcons();
 
-      fetch("{% url 'get_savings_tip' %}")
+      const adviceUrl = selectedMonth
+        ? `{% url 'get_savings_tip' %}?month=${encodeURIComponent(selectedMonth)}`
+        : "{% url 'get_savings_tip' %}";
+
+      fetch(adviceUrl)
           .then(response => response.json())
           .then(data => {
               content.innerText = data.advice;

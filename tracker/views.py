@@ -17,6 +17,7 @@ from openpyxl import Workbook
 from xhtml2pdf import pisa
 from django.template.loader import get_template
 from io import BytesIO
+from urllib.parse import urlparse, parse_qs
 
 @login_required
 def add_expense(request):
@@ -362,14 +363,33 @@ def dashboard(request):
 @login_required
 def get_savings_tip(request):
     """
-    API endpoint to fetch AI savings advice based on current month's spending.
+    API endpoint to fetch AI savings advice based on selected month's spending.
     """
-    # 1. Aggregate spending by category for the current month
-    current_month = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    selected_month_str = request.GET.get('month')
+    if not selected_month_str:
+        referer = request.META.get('HTTP_REFERER', '')
+        if referer:
+            parsed_referer = urlparse(referer)
+            selected_month_str = parse_qs(parsed_referer.query).get('month', [''])[0]
+
+    if selected_month_str:
+        try:
+            selected_month = datetime.strptime(selected_month_str, '%Y-%m')
+            current_month = selected_month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        except ValueError:
+            current_month = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    else:
+        current_month = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    if current_month.month == 12:
+        next_month = current_month.replace(year=current_month.year + 1, month=1)
+    else:
+        next_month = current_month.replace(month=current_month.month + 1)
     
     expenses = Expense.objects.filter(
         user=request.user,
-        created_at__gte=current_month
+        created_at__gte=current_month,
+        created_at__lt=next_month
     ).values('category__name').annotate(total=Sum('amount')).order_by('-total')
     
     summary = []
@@ -378,7 +398,9 @@ def get_savings_tip(request):
         summary.append({'category': cat_name, 'total': float(item['total'])})
     
     if not summary:
-        return JsonResponse({'advice': "No expenses recorded this month yet! Add some expenses to get advice."})
+        return JsonResponse({
+            'advice': f"No expenses recorded for {current_month.strftime('%B %Y')} yet. Add some expenses to get advice."
+        })
         
     # 2. Get AI Advice
     advice = get_ai_budget_advice(summary)
